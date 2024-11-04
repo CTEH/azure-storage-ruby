@@ -72,9 +72,13 @@ module Azure::Storage::Common::Core
                         end || nil
         Faraday.new(uri, ssl: ssl_options, proxy: proxy_options) do |conn|
           conn.response :follow_redirects #use Faraday::FollowRedirects::Middleware
-          conn.adapter :net_http_persistent, pool_size: 5 do |http|
-            # yields Net::HTTP::Persistent
-            http.idle_timeout = 100
+          if self.storage_connection_builder
+            conn.adapter(&self.storage_connection_builder)
+          # else
+            # conn.adapter :net_http_persistent, pool_size: 5 do |http|
+            #   # yields Net::HTTP::Persistent
+            #   http.idle_timeout = 100
+            # end
           end
         end
       end

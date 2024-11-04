@@ -64,7 +64,8 @@ module Azure::Storage::Common
                 :storage_table_host_secondary,
                 :storage_blob_host_secondary,
                 :storage_queue_host_secondary,
-                :storage_file_host_secondary
+                :storage_file_host_secondary,
+                :storage_connection_builder
 
     attr_reader :signer
 
@@ -81,6 +82,7 @@ module Azure::Storage::Common
           :storage_blob_host,
           :storage_queue_host,
           :storage_file_host,
+          :storage_connection_builder,
           :signer
         ]
       end

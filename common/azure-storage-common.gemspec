@@ -43,8 +43,6 @@ Gem::Specification.new do |s|
 
   s.add_runtime_dependency('faraday',                 '~> 2.0')
   s.add_runtime_dependency('faraday-follow_redirects','~> 0.3.0')
-  s.add_runtime_dependency('faraday-net_http_persistent', '~> 2.0')
-  s.add_runtime_dependency("net-http-persistent",     '~> 4.0')
   s.add_runtime_dependency("nokogiri",                "~> 1", ">= 1.10.8")
   s.add_development_dependency("dotenv",              "~> 2.0")
   s.add_development_dependency("minitest",            "~> 5")

@@ -30,6 +30,8 @@ module Azure::Storage::Common
     include Azure::Storage::Common::ClientOptions
     include Azure::Storage::Common::Core::HttpClient
 
+    attr_accessor :storage_connection_builder
+
     # Public: Creates an instance of [Azure::Storage::Common::Client]
     #
     # ==== Attributes
@@ -75,6 +77,14 @@ module Azure::Storage::Common
       if options.is_a?(Hash) && options.has_key?(:user_agent_prefix)
         Azure::Storage::Common::Service::StorageService.user_agent_prefix = options[:user_agent_prefix]
         options.delete :user_agent_prefix
+      end
+      if options.is_a?(Hash)
+        if !options.has_key?(:storage_connection_builder)
+          logger.warn("It's highly recommended to set the storage_connection_builder option to use a Faraday adapter supporting persistent connections.")
+        else
+          @storage_connection_builder = options[:storage_connection_builder]
+          options.delete :storage_connection_builder
+        end
       end
       Azure::Storage::Common::Service::StorageService.register_request_callback(&block) if block_given?
       reset!(options)
