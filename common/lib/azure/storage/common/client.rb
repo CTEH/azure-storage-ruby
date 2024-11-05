@@ -23,6 +23,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 #--------------------------------------------------------------------------
+require "azure/storage/common/core/utility"
 
 module Azure::Storage::Common
   class Client
@@ -80,7 +81,7 @@ module Azure::Storage::Common
       end
       if options.is_a?(Hash)
         if !options.has_key?(:storage_connection_builder)
-          logger.warn("It's highly recommended to set the storage_connection_builder option to use a Faraday adapter supporting persistent connections.")
+          Azure::Storage::Common::Core::Logger.warn("It's highly recommended to set the storage_connection_builder option to use a Faraday adapter supporting persistent connections.")
         else
           @storage_connection_builder = options[:storage_connection_builder]
           options.delete :storage_connection_builder
