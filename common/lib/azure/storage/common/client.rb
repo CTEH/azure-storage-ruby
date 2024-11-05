@@ -81,7 +81,9 @@ module Azure::Storage::Common
       end
       if options.is_a?(Hash)
         if !options.has_key?(:storage_connection_builder)
-          Azure::Storage::Common::Core::Logger.warn("It's highly recommended to set the storage_connection_builder option to use a Faraday adapter supporting persistent connections.")
+          if Faraday.default_adapter == :net_http
+            Azure::Storage::Common::Core::Logger.warn("It's highly recommended to set the storage_connection_builder option to use a Faraday adapter supporting persistent connections.")
+          end
         else
           @storage_connection_builder = options[:storage_connection_builder]
           options.delete :storage_connection_builder
