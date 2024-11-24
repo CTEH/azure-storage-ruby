@@ -72,7 +72,7 @@ module Azure::Storage::Common::Core
                         end || nil
         Faraday.new(uri, ssl: ssl_options, proxy: proxy_options) do |conn|
           conn.response :follow_redirects #use Faraday::FollowRedirects::Middleware
-          self.storage_connection_builder&.call(conn)
+          storage_connection_builder&.call(conn)
         end
       end
   end

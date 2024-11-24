@@ -98,6 +98,10 @@ module Azure::Storage::File
     StorageService.with_header headers, "x-ms-content-md5", options[:content_md5]
     StorageService.with_header headers, "x-ms-cache-control", options[:cache_control]
     StorageService.with_header headers, "x-ms-content-disposition", options[:content_disposition]
+    StorageService.with_header headers, "x-ms-lease-id", options[:lease_id] if options[:lease_id]
+    StorageService.with_time_header headers, "x-ms-file-creation-time", options[:creation_time]
+    StorageService.with_time_header headers, "x-ms-file-last-write-time", options[:last_write_time]
+    StorageService.with_time_header headers, "x-ms-file-change-time", options[:change_time]
 
     StorageService.add_metadata_to_headers options[:metadata], headers
     headers["x-ms-content-type"] = Default::CONTENT_TYPE_VALUE unless headers["x-ms-content-type"]
@@ -238,10 +242,80 @@ module Azure::Storage::File
       StorageService.with_header headers, "x-ms-cache-control", options[:cache_control]
       StorageService.with_header headers, "x-ms-content-length", options[:content_length].to_s if options[:content_length]
       StorageService.with_header headers, "x-ms-content-disposition", options[:content_disposition]
+      StorageService.with_header headers, "x-ms-lease-id", options[:lease_id] if options[:lease_id]
+      StorageService.with_time_header headers, "x-ms-file-creation-time", options[:creation_time]
+      StorageService.with_time_header headers, "x-ms-file-last-write-time", options[:last_write_time]
+      StorageService.with_time_header headers, "x-ms-file-change-time", options[:change_time]
     end
+
+    # TODO: remove this after debugging
+    logger.info "set_file_properties headers: #{headers}"
 
     call(:put, uri, nil, headers, options)
     nil
+  end
+
+  def acquire_file_lease(share, directory_path, file, options = {})
+    query = { "comp" => "lease" }
+    StorageService.with_query query, "timeout", options[:timeout].to_s if options[:timeout]
+    uri = file_uri(share, directory_path, file, query)
+
+    headers = {}
+
+    duration = (options&.send(:[], :duration) || -1).to_s
+    StorageService.with_header headers, "x-ms-lease-action", "acquire"
+    StorageService.with_header headers, "x-ms-lease-duration", duration
+    StorageService.with_header headers, "x-ms-proposed-lease-id", options[:proposed_lease_id] if options&.send(:[], :proposed_lease_id)
+
+    response = call(:put, uri, nil, headers, options)
+    result = Serialization.lease_from_headers(response.headers)
+    result
+  end
+
+  def release_file_lease(share, directory_path, file, options = {})
+    query = { "comp" => "lease" }
+    StorageService.with_query query, "timeout", options[:timeout].to_s if options[:timeout]
+    uri = file_uri(share, directory_path, file, query)
+
+    headers = {}
+
+    StorageService.with_header headers, "x-ms-lease-action", "release"
+    StorageService.with_header headers, "x-ms-lease-id", options[:lease_id] || raise(ArgumentError, "Missing required option :lease_id")
+
+    response = call(:put, uri, nil, headers, options)
+    result = Serialization.lease_from_headers(response.headers)
+    result
+  end
+
+  def change_file_lease(share, directory_path, file, options = {})
+    query = { "comp" => "lease" }
+    StorageService.with_query query, "timeout", options[:timeout].to_s if options[:timeout]
+    uri = file_uri(share, directory_path, file, query)
+
+    headers = {}
+
+    StorageService.with_header headers, "x-ms-lease-action", "change"
+    StorageService.with_header headers, "x-ms-lease-id", options[:lease_id] || raise(ArgumentError, "Missing required option :lease_id")
+    StorageService.with_header headers, "x-ms-proposed-lease-id", options[:proposed_lease_id] || raise(ArgumentError, "Missing required option :proposed_lease_id")
+
+    response = call(:put, uri, nil, headers, options)
+    result = Serialization.lease_from_headers(response.headers)
+    result
+  end
+
+  def break_file_lease(share, directory_path, file, options = {})
+    query = { "comp" => "lease" }
+    StorageService.with_query query, "timeout", options[:timeout].to_s if options[:timeout]
+    uri = file_uri(share, directory_path, file, query)
+
+    headers = {}
+
+    StorageService.with_header headers, "x-ms-lease-action", "break"
+    StorageService.with_header headers, "x-ms-lease-id", options[:lease_id] if options&.send(:[], :lease_id)
+
+    response = call(:put, uri, nil, headers, options)
+    result = Serialization.lease_from_headers(response.headers)
+    result
   end
 
   # Public: Resizes a file to the specified size.
@@ -305,6 +379,8 @@ module Azure::Storage::File
     StorageService.with_header headers, "Content-MD5", options[:transactional_md5]
     StorageService.with_header headers, "x-ms-range", "bytes=#{start_range}-#{end_range}"
     StorageService.with_header headers, "x-ms-write", "update"
+    StorageService.with_header headers, "x-ms-lease-id", options[:lease_id] if options[:lease_id]
+    StorageService.with_header headers, "x-ms-last-write-time", "preserve" if options[:last_write_time]&.(:!=, "now")
 
     response = call(:put, uri, content, headers, options)
 
@@ -344,6 +420,7 @@ module Azure::Storage::File
     headers = {}
     StorageService.with_header headers, "x-ms-range", "bytes=#{start_range}-#{end_range}"
     StorageService.with_header headers, "x-ms-write", "clear"
+    StorageService.with_header headers, "x-ms-lease-id", options[:lease_id] if options[:lease_id]
 
     response = call(:put, uri, nil, headers, options)
 
@@ -389,6 +466,7 @@ module Azure::Storage::File
 
     headers = {}
     StorageService.with_header headers, "x-ms-range", "bytes=#{options[:start_range]}-#{options[:end_range]}" if options[:start_range]
+    StorageService.with_header headers, "x-ms-lease-id", options[:lease_id] if options[:lease_id]
 
     response = call(:get, uri, nil, headers, options)
 
@@ -461,6 +539,7 @@ module Azure::Storage::File
 
     # Headers
     headers = {}
+    StorageService.with_header headers, "x-ms-lease-id", options[:lease_id] if options[:lease_id]
     StorageService.add_metadata_to_headers(metadata, headers) if metadata
 
     # Call
@@ -494,8 +573,12 @@ module Azure::Storage::File
     query = {}
     query["timeout"] = options[:timeout].to_s if options[:timeout]
 
+    # Headers
+    headers = {}
+    StorageService.with_header headers, "x-ms-lease-id", options[:lease_id] if options[:lease_id]
+
     # Call
-    call(:delete, file_uri(share, directory_path, file, query), nil, {}, options)
+    call(:delete, file_uri(share, directory_path, file, query), nil, headers, options)
 
     # result
     nil
@@ -539,6 +622,7 @@ module Azure::Storage::File
     uri = file_uri(destination_share, destination_directory_path, destination_file, query)
     headers = {}
     StorageService.with_header headers, "x-ms-copy-source", source_uri
+    StorageService.with_header headers, "x-ms-lease-id", options[:lease_id] if options[:lease_id]
     StorageService.add_metadata_to_headers options[:metadata], headers unless options.empty?
 
     response = call(:put, uri, nil, headers, options)
@@ -612,6 +696,7 @@ module Azure::Storage::File
     uri = file_uri(share, directory_path, file, query);
     headers = {}
     StorageService.with_header headers, "x-ms-copy-action", "abort";
+    StorageService.with_header headers, "x-ms-lease-id", options[:lease_id] if options[:lease_id]
 
     call(:put, uri, nil, headers, options)
     nil

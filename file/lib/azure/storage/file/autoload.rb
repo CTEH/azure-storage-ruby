@@ -39,6 +39,7 @@ module Azure
       autoload :Share,                    "azure/storage/file/share"
       autoload :Directory,                "azure/storage/file/directory"
       autoload :File,                     "azure/storage/file/file"
+      autoload :Lease,                    "azure/storage/file/lease"
       autoload :Serialization,            "azure/storage/file/serialization"
     end
   end

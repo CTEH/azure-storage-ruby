@@ -25,6 +25,7 @@ module Azure
       #returns Faraday::Response
       def set_up_response(method, url, conn, headers ,body)
         conn.run_request(method, url, nil, nil) do |req|
+          # pp({method: method, url: url, headers: headers, body: body&.slice(0, 100)})
           req.body = body if body
           req.headers = headers if headers
           unless headers.nil?
@@ -33,6 +34,11 @@ module Azure
           end
           req.options[:open_timeout] ||= 60
         end
+      # rescue => e
+      #   puts "Error occurred during HTTP request:"
+      #   puts e.message
+      #   puts e.backtrace.join("\n")
+      #   raise e
       end
   end
 end

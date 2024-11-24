@@ -203,6 +203,31 @@ module Azure::Storage
 
         props[:accept_ranges] = headers["Accept-Ranges"].to_i if headers["Accept-Ranges"]
 
+        props[:creation_time] = headers["x-ms-file-creation-time"]
+        props[:last_write_time] = headers["x-ms-file-last-write-time"]
+        props[:change_time] = headers["x-ms-file-change-time"]
+        props[:file_attributes] = headers["x-ms-file-attributes"]
+        props[:file_id] = headers["x-ms-file-file-id"]
+        props[:file_parent_id] = headers["x-ms-file-parent-id"]
+        props[:lease_duration] = headers["x-ms-lease-duration"]
+        props[:lease_state] = headers["x-ms-lease-state"]
+        props[:lease_status] = headers["x-ms-lease-status"]
+
+        props
+      end
+
+      def self.lease_from_headers(headers)
+        Lease.new do |lease|
+          lease.time = headers["x-ms-lease-time"]
+          lease.lease_id = headers["x-ms-lease-id"]
+          lease.properties = lease_properties_from_headers(headers)
+        end
+      end
+
+      def self.lease_properties_from_headers(headers)
+        props = {}
+        props[:last_modified] = headers["Last-Modified"]
+        props[:version] = headers["x-ms-version"]
         props
       end
 

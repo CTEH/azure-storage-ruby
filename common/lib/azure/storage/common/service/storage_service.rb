@@ -295,6 +295,17 @@ module Azure::Storage::Common
           object[key] = value.to_s if value
         end
 
+        # Adds a value to the Hash object in the format of HTTP date
+        #
+        # * +:headers+    - A Hash of HTTP headers
+        # * +:key+        - The header name
+        # * +:value+      - The value as a DateTime or String
+        def with_time_value(headers, key, value)
+          return unless value
+          # This currently fails with an invalid format error in the x-ms-last-write-time header. Need to establish a working format for that header.
+          headers[key] = value.respond_to?(:httpdate) ? value.httpdate : value
+        end
+
         # Adds a header with the value
         #
         # * +:headers+    - A Hash of HTTP headers
@@ -308,6 +319,8 @@ module Azure::Storage::Common
         # * +:name+       - The parameter name
         # * +:value+      - The value
         alias with_query with_value
+
+        alias with_time_header with_time_value
 
         # Declares a default hash object for request headers
         def common_headers(options = {}, body = nil)

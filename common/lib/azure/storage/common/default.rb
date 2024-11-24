@@ -857,6 +857,9 @@ module Azure::Storage::Common
     OPERATION_TIMED_OUT = "OperationTimedOut"
     # Service Unavailable (503) = The server is currently unable to receive requests. Please retry your request.
     SERVER_BUSY = "ServerBusy"
+    LEASE_LOST = "LeaseLost"
+    LEASE_ID_MISSING = "LeaseIdMissing"
+    LEASE_ID_MISMATCH = "LeaseIdMismatch"
 
     # Legacy error code strings
     UPDATE_CONDITION_NOT_SATISFIED = "UpdateConditionNotSatisfied"
