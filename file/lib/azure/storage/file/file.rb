@@ -665,6 +665,13 @@ module Azure::Storage::File
   def copy_file(destination_share, destination_directory_path, destination_file, source_share, source_directory_path, source_file, options = {})
     source_file_uri = file_uri(source_share, source_directory_path, source_file, {}).to_s
 
+    # Header-based authorization where destination matches the source is hnadled automatically, but uri based authorization is not,
+    #   so we need to sign the request manually if the source and destination shares are the same
+    if source_share == destination_share
+      source_dummy_request = Azure::Core::Http::HttpRequest.new(:get, source_file_uri, body: "", headers: nil, client: @client)
+      source_file_uri = signer&.sign_request(source_dummy_request)&.uri || source_file_uri
+    end
+
     return copy_file_from_uri(destination_share, destination_directory_path, destination_file, source_file_uri, options)
   end
 
