@@ -728,7 +728,6 @@ module Azure::Storage::File
   #                                   in the analytics logs when storage analytics logging is enabled.
   #
   def rename_file_from_uri(destination_share, destination_directory_path, destination_file, source_uri, options = {})
-    logger.info "rename_file_from_uri: #{destination_share}, #{destination_directory_path}, #{destination_file}, #{source_uri}, #{options}"
     query = { "comp" => "rename" }
     StorageService.with_query query, "timeout", options[:timeout].to_s if options[:timeout]
 
