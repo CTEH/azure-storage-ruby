@@ -90,6 +90,8 @@ module Azure::Storage::File
       StorageService.with_query query, "maxresults", options[:max_results].to_s if options[:max_results]
       StorageService.with_query query, "timeout", options[:timeout].to_s if options[:timeout]
       StorageService.with_query query, "prefix", options[:prefix].to_s if options[:prefix]
+      include = normalize_include_options(options[:include])
+      StorageService.with_query query, "include", include if include
     end
 
     options[:request_location_mode] = Azure::Storage::Common::RequestLocationMode::PRIMARY_OR_SECONDARY
@@ -101,6 +103,17 @@ module Azure::Storage::File
       Serialization.directories_and_files_enumeration_results_from_xml(response.body)
     else
       response.exception
+    end
+  end
+
+  INCLUDE_OPTIONS = %w[Timestamps ETag Attributes PermissionKey].map { |option| [option.downcase, option] }.to_h
+
+  protected def normalize_include_options(include)
+    return if include.nil?
+    if include.is_a?(Array)
+      INCLUDE_OPTIONS.slice(*include.map { |o| o.to_s.downcase.gsub("_", "") }).values.compact.join(",")
+    else
+      include.to_s
     end
   end
 
@@ -280,5 +293,80 @@ module Azure::Storage::File
 
     # Result
     nil
+  end
+
+  # Public: Renames a source directory to a destination directory within the storage account.
+  #
+  # ==== Attributes
+  #
+  # * +destination_share+             - String. The name of the destination file share.
+  # * +destination_directory_path+    - String. The path to the destination directory.
+  # * +source_uri+                    - String. The source directory or directory URI to rename from.
+  # * +options+                       - Hash. Optional parameters.
+  #
+  # ==== Options
+  #
+  # Accepted key/value pairs in options parameter are:
+  # * +:metadata+                   - Hash. Custom metadata values to store with the renamed directory. If this parameter is not
+  #                                   specified, the operation will copy the source directory metadata to the destination
+  #                                   directory. If this parameter is specified, the destination directory is created with the
+  #                                   specified metadata, and metadata is not copied from the source directory.
+  # * +:timeout+                    - Integer. A timeout in seconds.
+  # * +:request_id+                 - String. Provides a client-generated, opaque value with a 1 KB character limit that is recorded
+  #                                   in the analytics logs when storage analytics logging is enabled.
+  #
+  def rename_directory_from_uri(destination_share, destination_directory_path, source_uri, options = {})
+    query = { "comp" => "rename" }
+    StorageService.with_query query, "timeout", options[:timeout].to_s if options[:timeout]
+
+    uri = directory_uri(destination_share, destination_directory_path, query)
+    headers = {}
+    StorageService.with_header headers, "x-ms-file-rename-source", source_uri
+    StorageService.with_header headers, "x-ms-source-lease-id", options[:source_lease_id] if options[:source_lease_id]
+    StorageService.with_header headers, "x-ms-destination-lease-id", options[:destination_lease_id] if options[:destination_lease_id]
+    StorageService.with_header headers, "x-ms-file-rename-replace-if-exists", "true" if options[:replace_if_exists]
+    StorageService.add_metadata_to_headers options[:metadata], headers unless options.empty?
+    # Having any value in "Content-Type" will cause this particular operation to fail.
+    #   Note: the Content-Type header cannot be deleted because Net::HTTP will always set it; use an empty string instead
+    StorageService.with_header headers, "Content-Type", ""
+
+    response = call(:put, uri, nil, headers, options)
+
+    # result
+    nil
+  end
+
+  # Public: Renames a source directory to a destination directory within the same storage account.
+  #
+  # ==== Attributes
+  #
+  # * +destination_share+             - String. The destination share name to rename to.
+  # * +destination_directory_path+    - String. The path to the destination directory to rename to.
+  # * +source_share+                  - String. The source share name to rename from.
+  # * +source_directory_path+         - String. The path to the source directory to rename from.
+  # * +options+                       - Hash. Optional parameters.
+  #
+  # ==== Options
+  #
+  # Accepted key/value pairs in options parameter are:
+  # * +:metadata+                   - Hash. Custom metadata values to store with the reanmed directory. If this parameter is not
+  #                                   specified, the operation will copy the source directory metadata to the destination
+  #                                   directory. If this parameter is specified, the destination directory is created with the
+  #                                   specified metadata, and metadata is not copied from the source directory.
+  # * +:timeout+                    - Integer. A timeout in seconds.
+  # * +:request_id+                 - String. Provides a client-generated, opaque value with a 1 KB character limit that is recorded
+  #                                   in the analytics logs when storage analytics logging is enabled.
+  #
+  def rename_directory(destination_share, destination_directory_path, source_share, source_directory_path, options = {})
+    source_directory_uri = directory_uri(source_share, source_directory_path, {}).to_s
+
+    # Header-based authorization where destination matches the source is hnadled automatically, but uri based authorization is not,
+    #   so we need to sign the request manually if the source and destination shares are the same
+    if source_share == destination_share
+      source_dummy_request = Azure::Core::Http::HttpRequest.new(:get, source_directory_uri, body: "", headers: nil, client: @client)
+      source_directory_uri = signer&.sign_request(source_dummy_request)&.uri || source_directory_uri
+    end
+
+    return rename_directory_from_uri(destination_share, destination_directory_path, source_directory_uri, options)
   end
 end

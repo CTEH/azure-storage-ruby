@@ -134,6 +134,9 @@ module Azure::Storage
         File.new do |file|
           file.name = xml.Name.text if (xml > "Name").any?
           file.properties = file_properties_from_xml(xml.Properties) if (xml > "Properties").any?
+          file.properties[:file_id] = xml.FileId.text if (xml > "FileId").any?
+          file.properties[:attributes] = xml.Attributes.text if (xml > "Attributes").any?
+          file.properties[:permission_key] = xml.PermissionKey.text if (xml > "PermissionKey").any?
         end
       end
 
@@ -143,6 +146,12 @@ module Azure::Storage
 
         props = {}
         props[:content_length] = (xml > "Content-Length").text.to_i if (xml > "Content-Length").any?
+        props[:creation_time] = (xml > "CreationTime").text if (xml > "CreationTime").any?
+        props[:last_access_time] = (xml > "LastAccessTime").text if (xml > "LastAccessTime").any?
+        props[:last_write_time] = (xml > "LastWriteTime").text if (xml > "LastWriteTime").any?
+        props[:change_time] = (xml > "ChangeTime").text if (xml > "ChangeTime").any?
+        props[:last_modified] = (xml > "Last-Modified").text if (xml > "Last-Modified").any?
+        props[:etag] = (xml > "Etag").text if (xml > "Etag").any?
         props
       end
 
@@ -152,7 +161,26 @@ module Azure::Storage
 
         Directory::Directory.new do |directory|
           directory.name = xml.Name.text if (xml > "Name").any?
+          directory.properties = directory_properties_from_xml(xml.Properties) if (xml > "Properties").any?
+          directory.properties[:file_id] = xml.FileId.text if (xml > "FileId").any?
+          directory.properties[:attributes] = xml.Attributes.text if (xml > "Attributes").any?
+          directory.properties[:permission_key] = xml.PermissionKey.text if (xml > "PermissionKey").any?
         end
+      end
+
+      def self.directory_properties_from_xml(xml)
+        xml = slopify(xml)
+        expect_node("Properties", xml)
+
+        props = {}
+        props[:content_length] = (xml > "Content-Length").text.to_i if (xml > "Content-Length").any?
+        props[:creation_time] = (xml > "CreationTime").text if (xml > "CreationTime").any?
+        props[:last_access_time] = (xml > "LastAccessTime").text if (xml > "LastAccessTime").any?
+        props[:last_write_time] = (xml > "LastWriteTime").text if (xml > "LastWriteTime").any?
+        props[:change_time] = (xml > "ChangeTime").text if (xml > "ChangeTime").any?
+        props[:last_modified] = (xml > "Last-Modified").text if (xml > "Last-Modified").any?
+        props[:etag] = (xml > "Etag").text if (xml > "Etag").any?
+        props
       end
 
       def self.directory_from_headers(headers)
@@ -164,7 +192,12 @@ module Azure::Storage
 
       def self.directory_properties_from_headers(headers)
         props = {}
+        props[:file_attributes] = headers["x-ms-file-attributes"]
+        props[:file_id] = headers["x-ms-file-file-id"]
         props[:last_modified] = headers["Last-Modified"]
+        props[:creation_time] = headers["x-ms-file-creation-time"]
+        props[:last_write_time] = headers["x-ms-file-last-write-time"]
+        props[:change_time] = headers["x-ms-file-change-time"]
         props[:etag] = headers["ETag"]
         props
       end

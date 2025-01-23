@@ -248,9 +248,6 @@ module Azure::Storage::File
       StorageService.with_time_header headers, "x-ms-file-change-time", options[:change_time]
     end
 
-    # TODO: remove this after debugging
-    logger.info "set_file_properties headers: #{headers}"
-
     call(:put, uri, nil, headers, options)
     nil
   end
@@ -707,6 +704,82 @@ module Azure::Storage::File
 
     call(:put, uri, nil, headers, options)
     nil
+  end
+
+  # Public: Renames a source file to a destination file within the storage account.
+  #
+  # ==== Attributes
+  #
+  # * +destination_share+             - String. The name of the destination file share.
+  # * +destination_directory_path+    - String. The path to the destination directory.
+  # * +destination_file+              - String. The name of the destination file.
+  # * +source_uri+                    - String. The source file or file URI to rename from.
+  # * +options+                       - Hash. Optional parameters.
+  #
+  # ==== Options
+  #
+  # Accepted key/value pairs in options parameter are:
+  # * +:metadata+                   - Hash. Custom metadata values to store with the renamed file. If this parameter is not
+  #                                   specified, the operation will copy the source file metadata to the destination
+  #                                   file. If this parameter is specified, the destination file is created with the
+  #                                   specified metadata, and metadata is not copied from the source file.
+  # * +:timeout+                    - Integer. A timeout in seconds.
+  # * +:request_id+                 - String. Provides a client-generated, opaque value with a 1 KB character limit that is recorded
+  #                                   in the analytics logs when storage analytics logging is enabled.
+  #
+  def rename_file_from_uri(destination_share, destination_directory_path, destination_file, source_uri, options = {})
+    logger.info "rename_file_from_uri: #{destination_share}, #{destination_directory_path}, #{destination_file}, #{source_uri}, #{options}"
+    query = { "comp" => "rename" }
+    StorageService.with_query query, "timeout", options[:timeout].to_s if options[:timeout]
+
+    uri = file_uri(destination_share, destination_directory_path, destination_file, query)
+    headers = {}
+    StorageService.with_header headers, "x-ms-file-rename-source", source_uri
+    StorageService.with_header headers, "x-ms-source-lease-id", options[:source_lease_id] if options[:source_lease_id]
+    StorageService.with_header headers, "x-ms-destination-lease-id", options[:destination_lease_id] if options[:destination_lease_id]
+    StorageService.with_header headers, "x-ms-file-rename-replace-if-exists", "true" if options[:replace_if_exists]
+    StorageService.add_metadata_to_headers options[:metadata], headers unless options.empty?
+
+    response = call(:put, uri, nil, headers, options)
+
+    # result
+    nil
+  end
+
+  # Public: Renames a source file to a destination file within the same storage account.
+  #
+  # ==== Attributes
+  #
+  # * +destination_share+             - String. The destination share name to rename to.
+  # * +destination_directory_path+    - String. The path to the destination directory.
+  # * +source_file+                   - String. The destination file name to rename to.
+  # * +source_share+                  - String. The source share name to rename from.
+  # * +source_directory_path+         - String. The path to the source directory.
+  # * +source_file+                   - String. The source file name to rename from.
+  # * +options+                       - Hash. Optional parameters.
+  #
+  # ==== Options
+  #
+  # Accepted key/value pairs in options parameter are:
+  # * +:metadata+                   - Hash. Custom metadata values to store with the reanmed file. If this parameter is not
+  #                                   specified, the operation will copy the source file metadata to the destination
+  #                                   file. If this parameter is specified, the destination file is created with the
+  #                                   specified metadata, and metadata is not copied from the source file.
+  # * +:timeout+                    - Integer. A timeout in seconds.
+  # * +:request_id+                 - String. Provides a client-generated, opaque value with a 1 KB character limit that is recorded
+  #                                   in the analytics logs when storage analytics logging is enabled.
+  #
+  def rename_file(destination_share, destination_directory_path, destination_file, source_share, source_directory_path, source_file, options = {})
+    source_file_uri = file_uri(source_share, source_directory_path, source_file, {}).to_s
+
+    # Header-based authorization where destination matches the source is hnadled automatically, but uri based authorization is not,
+    #   so we need to sign the request manually if the source and destination shares are the same
+    if source_share == destination_share
+      source_dummy_request = Azure::Core::Http::HttpRequest.new(:get, source_file_uri, body: "", headers: nil, client: @client)
+      source_file_uri = signer&.sign_request(source_dummy_request)&.uri || source_file_uri
+    end
+
+    return rename_file_from_uri(destination_share, destination_directory_path, destination_file, source_file_uri, options)
   end
 
   # Public: Creates a new file or replaces a file with content

@@ -74,7 +74,11 @@ module Azure
           parse_response
           # Use reason phrase as the description if description is empty
           @description = http_response.reason_phrase if (@description.nil? || @description.empty?) && http_response.reason_phrase
-          super("#{type} (#{status_code}): #{description}")
+          message = "#{type} (#{status_code}): #{description}"
+          unless header.nil? || header.empty?
+            message = "#{message}\nInvalid header: #{header}: #{header_value}"
+          end
+          super(message)
         end
 
         # Extract the relevant information from the response's body. If the response
