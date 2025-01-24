@@ -261,7 +261,8 @@ module Azure::Storage::File
 
     duration = (options&.send(:[], :duration) || -1).to_s
     StorageService.with_header headers, "x-ms-lease-action", "acquire"
-    StorageService.with_header headers, "x-ms-lease-duration", duration
+    StorageService.with_header headers, "x-ms-lease-duration", duration # duration must always be -1; allowing for possible future changes
+    StorageService.with_header headers, "x-ms-lease-id", options[:lease_id] if options[:lease_id]
     StorageService.with_header headers, "x-ms-proposed-lease-id", options[:proposed_lease_id] if options&.send(:[], :proposed_lease_id)
 
     response = call(:put, uri, nil, headers, options)

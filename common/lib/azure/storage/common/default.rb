@@ -860,6 +860,7 @@ module Azure::Storage::Common
     LEASE_LOST = "LeaseLost"
     LEASE_ID_MISSING = "LeaseIdMissing"
     LEASE_ID_MISMATCH = "LeaseIdMismatch"
+    LEASE_ALREADY_PRESENT = "LeaseAlreadyPresent"
 
     # Legacy error code strings
     UPDATE_CONDITION_NOT_SATISFIED = "UpdateConditionNotSatisfied"
