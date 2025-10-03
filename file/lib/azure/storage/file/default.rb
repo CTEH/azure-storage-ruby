@@ -97,5 +97,6 @@ module Azure::Storage::File
     SHARE_ALREADY_EXISTS = "ShareAlreadyExists"
     SHARE_NOT_FOUND = "ShareNotFound"
     FILE_NOT_FOUND = "FileNotFound"
+    READ_ONLY_ATTRIBUTE = "ReadOnlyAttribute"
   end
 end

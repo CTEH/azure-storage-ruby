@@ -336,6 +336,74 @@ module Azure::Storage::File
     nil
   end
 
+  # Public: Sets system properties for the specified directory.
+  #
+  # ==== Attributes
+  #
+  # * +share+                     - String. The name of the file share.
+  # * +directory_path+            - String. The path to the directory.
+  # * +options+                   - Hash. Optional parameters.
+  #
+  # ==== Options
+  #
+  # Accepted key/value pairs in options parameter are:
+  # * +:creation_time+            - DateTime|String. The Coordinated Universal Time (UTC) creation time property for a directory.
+  #                                 A value of "preserve" can be passed to keep an existing value unchanged. (optional)
+  # * +:last_write_time+          - DateTime|String. The Coordinated Universal Time (UTC) last write property for a directory.
+  #                                 A value of "preserve" can be passed to keep an existing value unchanged. (optional)
+  # * +:change_time+              - DateTime|String. The Coordinated Universal Time (UTC) change time property for the directory.
+  #                                 You can use a value of "now" to indicate the time of the request. (optional, SMB only)
+  # * +:permission+               - String. The security descriptor for the directory in SDDL or binary format. (optional, SMB only)
+  # * +:permission_format+        - String. Specifies whether the permission is in SDDL or binary format. (optional, SMB only)
+  # * +:permission_key+           - String. The key of the permission to be set for the directory. (optional, SMB only)
+  # * +:file_attributes+          - String. The file system attributes on the directory. (optional, SMB only)
+  # * +:mode+                     - String. The mode of the directory in POSIX format. (optional, NFS only)
+  # * +:owner+                    - String. The user identifier (UID) of the directory owner. (optional, NFS only)
+  # * +:group+                    - String. The group identifier (GID) of the directory owner. (optional, NFS only)
+  # * +:request_intent+           - String. Required if Authorization header specifies an OAuth token. Acceptable value is "backup". (optional)
+  # * +:allow_trailing_dot+       - Boolean. Specifies if a trailing dot present in request url should be trimmed or not. (optional)
+  # * +:timeout+                  - Integer. A timeout in seconds.
+  # * +:request_id+               - String. Provides a client-generated, opaque value with a 1 KB character limit that is recorded
+  #                                 in the analytics logs when storage analytics logging is enabled.
+  #
+  # See https://learn.microsoft.com/en-us/rest/api/storageservices/set-directory-properties
+  #
+  # Returns nil on success
+  def set_directory_properties(share, directory_path, options = {})
+    Azure::Storage::Common::Core::Logger.warn("set_directory_properties: #{options.inspect}")
+    # Query
+    query = { "comp" => "properties" }
+    query["timeout"] = options[:timeout].to_s if options[:timeout]
+
+    # Headers
+    headers = {}
+
+    # Common headers
+    StorageService.with_time_header headers, "x-ms-file-creation-time", options[:creation_time] if options[:creation_time]
+    StorageService.with_time_header headers, "x-ms-file-last-write-time", options[:last_write_time] if options[:last_write_time]
+    StorageService.with_header headers, "x-ms-file-request-intent", options[:request_intent] if options[:request_intent]
+    StorageService.with_header headers, "x-ms-allow-trailing-dot", options[:allow_trailing_dot].to_s if options[:allow_trailing_dot]
+
+    # SMB only headers
+    StorageService.with_time_header headers, "x-ms-file-change-time", options[:change_time] if options[:change_time]
+    StorageService.with_header headers, "x-ms-file-permission", options[:permission] if options[:permission]
+    StorageService.with_header headers, "x-ms-file-permission-format", options[:permission_format] if options[:permission_format]
+    StorageService.with_header headers, "x-ms-file-permission-key", options[:permission_key] if options[:permission_key]
+    
+    StorageService.with_header headers, "x-ms-file-attributes", options[:file_attributes] if options[:file_attributes]
+
+    # NFS only headers
+    StorageService.with_header headers, "x-ms-mode", options[:mode] if options[:mode]
+    StorageService.with_header headers, "x-ms-owner", options[:owner] if options[:owner]
+    StorageService.with_header headers, "x-ms-group", options[:group] if options[:group]
+
+    # Call
+    call(:put, directory_uri(share, directory_path, query), nil, headers, options)
+
+    # Result
+    nil
+  end
+
   # Public: Renames a source directory to a destination directory within the same storage account.
   #
   # ==== Attributes

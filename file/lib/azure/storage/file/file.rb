@@ -220,6 +220,11 @@ module Azure::Storage::File
   # * +:content_length+            - Integer. Resizes a file to the specified size. If the specified
   #                                  value is less than the current size of the file, then all ranges above
   #                                  the specified value are cleared.
+  # * +:file_attributes+           - String. File attributes for the file. Will be saved with file.
+  # * +:creation_time+             - String. Creation time for the file. Will be saved with file.
+  # * +:last_write_time+           - String. Last write time for the file. Will be saved with file.
+  # * +:change_time+               - String. Change time for the file. Will be saved with file.
+  # * +:lease_id+                  - String. Lease ID for the file. Will be saved with file.
   # * +:timeout+                   - Integer. A timeout in seconds.
   # * +:request_id+                - String. Provides a client-generated, opaque value with a 1 KB character limit that is recorded
   #                                  in the analytics logs when storage analytics logging is enabled.
@@ -243,6 +248,7 @@ module Azure::Storage::File
       StorageService.with_header headers, "x-ms-content-length", options[:content_length].to_s if options[:content_length]
       StorageService.with_header headers, "x-ms-content-disposition", options[:content_disposition]
       StorageService.with_header headers, "x-ms-lease-id", options[:lease_id] if options[:lease_id]
+      StorageService.with_header headers, "x-ms-file-attributes", options[:file_attributes] if options[:file_attributes]
       StorageService.with_time_header headers, "x-ms-file-creation-time", options[:creation_time]
       StorageService.with_time_header headers, "x-ms-file-last-write-time", options[:last_write_time]
       StorageService.with_time_header headers, "x-ms-file-change-time", options[:change_time]
